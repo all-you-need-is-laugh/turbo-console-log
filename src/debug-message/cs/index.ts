@@ -19,6 +19,8 @@ export class CSDebugMessage extends DebugMessage {
     addSemicolonInTheEnd: boolean,
     insertEnclosingClass: boolean,
     insertEnclosingFunction: boolean,
+    insertEmptyLineBeforeLogMessage: boolean,
+    insertEmptyLineAfterLogMessage: boolean,
     delemiterInsideMessage: string,
     includeFileNameAndLineNum: boolean,
     tabSize: number

@@ -19,6 +19,8 @@ export class JSDebugMessage extends DebugMessage {
     addSemicolonInTheEnd: boolean,
     insertEnclosingClass: boolean,
     insertEnclosingFunction: boolean,
+    insertEmptyLineBeforeLogMessage: boolean,
+    insertEmptyLineAfterLogMessage: boolean,
     delemiterInsideMessage: string,
     includeFileNameAndLineNum: boolean,
     tabSize: number,
@@ -40,6 +42,7 @@ export class JSDebugMessage extends DebugMessage {
       lineOfSelectedVar,
       selectedVar
     );
+    const linesToAdd: number = insertEmptyLineBeforeLogMessage ? 2 : 1;
     const spacesBeforeMsg: string = this.spacesBefore(
       document,
       lineOfSelectedVar,
@@ -60,19 +63,27 @@ export class JSDebugMessage extends DebugMessage {
     const debuggingMsg: string = `${logFunction !== 'log' ? logFunction : `console.${logType}`}(${quote}${logMessagePrefix}${
       logMessagePrefix.length !== 0 &&
       logMessagePrefix !== `${delemiterInsideMessage} `
-      ? ` ${delemiterInsideMessage} `
-      : ""}${includeFileNameAndLineNum
-      ? `file: ${fileName} ${delemiterInsideMessage} line ${lineOfLogMsg + 1} ${delemiterInsideMessage} `
-      : ""}${insertEnclosingClass
-      ? classThatEncloseTheVar.length > 0
-        ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
-        : ``
-      : ""}${insertEnclosingFunction
-      ? funcThatEncloseTheVar.length > 0
-        ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+        ? ` ${delemiterInsideMessage} `
         : ""
-      : ""}${selectedVar}${quote}, ${selectedVar})${semicolon}`;
-
+    }${
+      includeFileNameAndLineNum
+        ? `file: ${fileName} ${delemiterInsideMessage} line ${
+            lineOfLogMsg + linesToAdd
+          } ${delemiterInsideMessage} `
+        : ""
+    }${
+      insertEnclosingClass
+        ? classThatEncloseTheVar.length > 0
+          ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
+          : ``
+        : ""
+    }${
+      insertEnclosingFunction
+        ? funcThatEncloseTheVar.length > 0
+          ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+          : ""
+        : ""
+    }${selectedVar}${quote}, ${selectedVar})${semicolon}`;
     if (wrapLogMessage) {
       // 16 represents the length of console.log("");
       const wrappingMsg: string = `console.${logType}(${quote}${logMessagePrefix} ${"-".repeat(
@@ -108,7 +119,7 @@ export class JSDebugMessage extends DebugMessage {
         }${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}}\n`
       );
       return;
-    } 
+    }
     textEditor.insert(
       new vscode.Position(
         lineOfLogMsg >= document.lineCount
@@ -116,9 +127,9 @@ export class JSDebugMessage extends DebugMessage {
           : lineOfLogMsg,
         0
       ),
-      `${
+      `${insertEmptyLineBeforeLogMessage? "\n": ""}${
         lineOfLogMsg === document.lineCount ? "\n" : ""
-      }${spacesBeforeMsg}${debuggingMsg}\n`
+      }${spacesBeforeMsg}${debuggingMsg}\n${insertEmptyLineAfterLogMessage? "\n": ""}`
     );
   }
   line(

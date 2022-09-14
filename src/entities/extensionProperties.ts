@@ -5,6 +5,8 @@ export type ExtensionProperties = {
   addSemicolonInTheEnd: boolean;
   insertEnclosingClass: boolean;
   insertEnclosingFunction: boolean;
+  insertEmptyLineBeforeLogMessage: boolean;
+  insertEmptyLineAfterLogMessage: boolean;
   delimiterInsideMessage: string;
   includeFileNameAndLineNum: boolean;
   quote: string;
