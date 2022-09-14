@@ -9,6 +9,7 @@ export type ExtensionProperties = {
   includeFileNameAndLineNum: boolean;
   quote: string;
   logType: enumLogType;
+  logFunction: string;
 };
 
 enum enumLogType {

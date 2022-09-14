@@ -39,27 +39,35 @@ export function activate(context: vscode.ExtensionContext) {
         const lineOfSelectedVar: number = selection.active.line;
         // Check if the selection line is not the last one in the document and the selected variable is not empty
         if (selectedVar.trim().length !== 0) {
+          const {
+            wrapLogMessage,
+            logMessagePrefix,
+            quote,
+            addSemicolonInTheEnd,
+            insertEnclosingClass,
+            insertEnclosingFunction,
+            delimiterInsideMessage,
+            includeFileNameAndLineNum,
+            logType,
+            logFunction
+          } = properties;
           await editor.edit((editBuilder) => {
-            const logMessageLine = debugMessage.line(
-              document,
-              lineOfSelectedVar,
-              selectedVar
-            );
             debugMessage.msg(
               editBuilder,
               document,
               selectedVar,
               lineOfSelectedVar,
-              properties.wrapLogMessage,
-              properties.logMessagePrefix,
-              properties.quote,
-              properties.addSemicolonInTheEnd,
-              properties.insertEnclosingClass,
-              properties.insertEnclosingFunction,
-              properties.delimiterInsideMessage,
-              properties.includeFileNameAndLineNum,
+              wrapLogMessage,
+              logMessagePrefix,
+              quote,
+              addSemicolonInTheEnd,
+              insertEnclosingClass,
+              insertEnclosingFunction,
+              delimiterInsideMessage,
+              includeFileNameAndLineNum,
               tabSize,
-              properties.logType,
+              logType,
+              logFunction
             );
           });
         }
@@ -181,6 +189,7 @@ function getExtensionProperties(
   const includeFileNameAndLineNum =
     workspaceConfig.includeFileNameAndLineNum || false;
   const logType = workspaceConfig.logType || "log";
+  const logFunction = workspaceConfig.logFunction || 'log';
   const extensionProperties: ExtensionProperties = {
     unity3d,
     wrapLogMessage,
@@ -191,7 +200,8 @@ function getExtensionProperties(
     quote,
     delimiterInsideMessage,
     includeFileNameAndLineNum,
-    logType
+    logType,
+    logFunction
   };
   return extensionProperties;
 }
