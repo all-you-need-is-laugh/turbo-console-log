@@ -77,7 +77,7 @@ export class JSDebugMessage extends DebugMessage {
       // 16 represents the length of console.log("");
       const wrappingMsg: string = `console.${logType}(${quote}${logMessagePrefix} ${"-".repeat(
         debuggingMsg.length - 16
-      )}${quote})${semicolon}`;
+      )}${logMessagePrefix}${quote})${semicolon}`;
       textEditor.insert(
         new vscode.Position(
           lineOfLogMsg >= document.lineCount
@@ -89,6 +89,7 @@ export class JSDebugMessage extends DebugMessage {
           lineOfLogMsg === document.lineCount ? "\n" : ""
         }${spacesBeforeMsg}${wrappingMsg}\n${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}${wrappingMsg}\n`
       );
+      return;
     }
     const previousMsgLogLine = document.lineAt(lineOfLogMsg - 1);
     if (/\){.*}/.test(previousMsgLogLine.text.replace(/\s/g, ""))) {
@@ -106,19 +107,19 @@ export class JSDebugMessage extends DebugMessage {
           lineOfLogMsg === document.lineCount ? "\n" : ""
         }${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}}\n`
       );
-    } else {
-      textEditor.insert(
-        new vscode.Position(
-          lineOfLogMsg >= document.lineCount
-            ? document.lineCount
-            : lineOfLogMsg,
-          0
-        ),
-        `${
-          lineOfLogMsg === document.lineCount ? "\n" : ""
-        }${spacesBeforeMsg}${debuggingMsg}\n`
-      );
-    }
+      return;
+    } 
+    textEditor.insert(
+      new vscode.Position(
+        lineOfLogMsg >= document.lineCount
+          ? document.lineCount
+          : lineOfLogMsg,
+        0
+      ),
+      `${
+        lineOfLogMsg === document.lineCount ? "\n" : ""
+      }${spacesBeforeMsg}${debuggingMsg}\n`
+    );
   }
   line(
     document: TextDocument,
