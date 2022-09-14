@@ -1,8 +1,8 @@
-import * as vscode from "vscode";
-import { TextDocument, TextEditorEdit, TextLine } from "vscode";
-import { DebugMessage } from "..";
-import { BlockType, LocElement, Message } from "../../entities";
-import { LineCodeProcessing } from "../../line-code-processing";
+import * as vscode from 'vscode';
+import { TextDocument, TextEditorEdit, TextLine } from 'vscode';
+import { DebugMessage } from '..';
+import { BlockType, LocElement, Message } from '../../entities';
+import { LineCodeProcessing } from '../../line-code-processing';
 
 export class CSUnityDebugMessage extends DebugMessage {
   constructor(lineCodeProcessing: LineCodeProcessing) {
@@ -23,32 +23,32 @@ export class CSUnityDebugMessage extends DebugMessage {
     insertEmptyLineAfterLogMessage: boolean,
     delemiterInsideMessage: string,
     includeFileNameAndLineNum: boolean,
-    tabSize: number
+    tabSize: number,
   ): void {
     const classThatEncloseTheVar: string = this.enclosingBlockName(
       document,
       lineOfSelectedVar,
-      "class"
+      'class',
     );
     const funcThatEncloseTheVar: string = this.enclosingBlockName(
       document,
       lineOfSelectedVar,
-      "function"
+      'function',
     );
     const lineOfLogMsg: number = this.line(
       document,
       lineOfSelectedVar,
-      selectedVar
+      selectedVar,
     );
     const spacesBeforeMsg: string = this.spacesBefore(
       document,
       lineOfSelectedVar,
-      tabSize
+      tabSize,
     );
-    const semicolon: string = addSemicolonInTheEnd ? ";" : "";
-    const fileName = document.fileName.includes("/")
-      ? document.fileName.split("/")[document.fileName.split("/").length - 1]
-      : document.fileName.split("\\")[document.fileName.split("\\").length - 1];
+    const semicolon: string = addSemicolonInTheEnd ? ';' : '';
+    const fileName = document.fileName.includes('/')
+      ? document.fileName.split('/')[document.fileName.split('/').length - 1]
+      : document.fileName.split('\\')[document.fileName.split('\\').length - 1];
     if (
       !includeFileNameAndLineNum &&
       !insertEnclosingFunction &&
@@ -58,53 +58,63 @@ export class CSUnityDebugMessage extends DebugMessage {
       logMessagePrefix = `${delemiterInsideMessage} `;
     }
 
-    const debuggingMsg: string = `Debug.Log(${quote}${logMessagePrefix}${logMessagePrefix.length !== 0 &&
+    const debuggingMsg: string = `Debug.Log(${quote}${logMessagePrefix}${
+      logMessagePrefix.length !== 0 &&
       logMessagePrefix !== `${delemiterInsideMessage} `
-      ? ` ${delemiterInsideMessage} `
-      : ""}${includeFileNameAndLineNum
-      ? `file: ${fileName} ${delemiterInsideMessage} line ${lineOfLogMsg + 1} ${delemiterInsideMessage} `
-      : ""}${insertEnclosingClass
-      ? classThatEncloseTheVar.length > 0
-        ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
-        : ``
-      : ""}${insertEnclosingFunction
-      ? funcThatEncloseTheVar.length > 0
-        ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
-        : ""
-      : ""} ${quote} + ${selectedVar});`;
-    
+        ? ` ${delemiterInsideMessage} `
+        : ''
+    }${
+      includeFileNameAndLineNum
+        ? `file: ${fileName} ${delemiterInsideMessage} line ${
+            lineOfLogMsg + 1
+          } ${delemiterInsideMessage} `
+        : ''
+    }${
+      insertEnclosingClass
+        ? classThatEncloseTheVar.length > 0
+          ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
+          : ``
+        : ''
+    }${
+      insertEnclosingFunction
+        ? funcThatEncloseTheVar.length > 0
+          ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+          : ''
+        : ''
+    } ${quote} + ${selectedVar});`;
+
     if (wrapLogMessage) {
       // 21 represents the length of console.log("");
-      const wrappingMsg: string = `Debug.Log(${quote}${logMessagePrefix} ${"-".repeat(
-        debuggingMsg.length - 21
+      const wrappingMsg: string = `Debug.Log(${quote}${logMessagePrefix} ${'-'.repeat(
+        debuggingMsg.length - 21,
       )}${quote})${semicolon}`;
       textEditor.insert(
         new vscode.Position(
           lineOfLogMsg >= document.lineCount
             ? document.lineCount
             : lineOfLogMsg,
-          0
+          0,
         ),
         `${
-          lineOfLogMsg === document.lineCount ? "\n" : ""
-        }${spacesBeforeMsg}${wrappingMsg}\n${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}${wrappingMsg}\n`
+          lineOfLogMsg === document.lineCount ? '\n' : ''
+        }${spacesBeforeMsg}${wrappingMsg}\n${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}${wrappingMsg}\n`,
       );
     }
     const previousMsgLogLine = document.lineAt(lineOfLogMsg - 1);
-    if (/\){.*}/.test(previousMsgLogLine.text.replace(/\s/g, ""))) {
+    if (/\){.*}/.test(previousMsgLogLine.text.replace(/\s/g, ''))) {
       const textBeforeClosedFunctionParenthesis =
-        previousMsgLogLine.text.split(")")[0];
+        previousMsgLogLine.text.split(')')[0];
       textEditor.delete(previousMsgLogLine.rangeIncludingLineBreak);
       textEditor.insert(
         new vscode.Position(
           lineOfLogMsg >= document.lineCount
             ? document.lineCount
             : lineOfLogMsg,
-          0
+          0,
         ),
         `${textBeforeClosedFunctionParenthesis}){\n${
-          lineOfLogMsg === document.lineCount ? "\n" : ""
-        }${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}}\n`
+          lineOfLogMsg === document.lineCount ? '\n' : ''
+        }${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}}\n`,
       );
     } else {
       textEditor.insert(
@@ -112,18 +122,18 @@ export class CSUnityDebugMessage extends DebugMessage {
           lineOfLogMsg >= document.lineCount
             ? document.lineCount
             : lineOfLogMsg,
-          0
+          0,
         ),
         `${
-          lineOfLogMsg === document.lineCount ? "\n" : ""
-        }${spacesBeforeMsg}${debuggingMsg}\n`
+          lineOfLogMsg === document.lineCount ? '\n' : ''
+        }${spacesBeforeMsg}${debuggingMsg}\n`,
       );
     }
   }
   line(
     document: TextDocument,
     selectionLine: number,
-    selectedVar: string
+    selectedVar: string,
   ): number {
     if (selectionLine === document.lineCount - 1) {
       return selectionLine;
@@ -131,51 +141,51 @@ export class CSUnityDebugMessage extends DebugMessage {
     const multilineParenthesisVariableLine = this.getMultiLineVariableLine(
       document,
       selectionLine,
-      LocElement.Parenthesis
+      LocElement.Parenthesis,
     );
     const multilineBracesVariableLine = this.getMultiLineVariableLine(
       document,
       selectionLine,
-      LocElement.Braces
+      LocElement.Braces,
     );
     let currentLineText: string = document.lineAt(selectionLine).text;
     let nextLineText: string = document
       .lineAt(selectionLine + 1)
-      .text.replace(/\s/g, "");
+      .text.replace(/\s/g, '');
     if (
       this.lineCodeProcessing.isObjectLiteralAssignedToVariable(
-        `${currentLineText}\n${nextLineText}`
+        `${currentLineText}\n${nextLineText}`,
       )
     ) {
       return this.objectLiteralLine(document, selectionLine);
     } else if (
       this.lineCodeProcessing.isFunctionAssignedToVariable(`${currentLineText}`)
     ) {
-      if (currentLineText.split("=")[0].includes(selectedVar)) {
+      if (currentLineText.split('=')[0].includes(selectedVar)) {
         return this.functionAssignmentLine(document, selectionLine);
       } else {
         return this.functionOpenedBraceLine(document, selectionLine) + 1;
       }
     } else if (
       this.lineCodeProcessing.isObjectFunctionCall(
-        `${currentLineText}\n${nextLineText}`
+        `${currentLineText}\n${nextLineText}`,
       )
     ) {
       return this.objectFunctionCallLine(document, selectionLine, selectedVar);
     } else if (
       this.lineCodeProcessing.isArrayAssignedToVariable(
-        `${currentLineText}\n${currentLineText}`
+        `${currentLineText}\n${currentLineText}`,
       )
     ) {
       return this.arrayLine(document, selectionLine);
     } else if (
       this.lineCodeProcessing.isValueAssignedToVariable(
-        `${currentLineText}\n${currentLineText}`
+        `${currentLineText}\n${currentLineText}`,
       )
     ) {
       return multilineParenthesisVariableLine !== null &&
         this.lineText(document, multilineParenthesisVariableLine - 1).includes(
-          "{"
+          '{',
         )
         ? multilineParenthesisVariableLine
         : selectionLine + 1;
@@ -183,14 +193,14 @@ export class CSUnityDebugMessage extends DebugMessage {
       if (
         multilineParenthesisVariableLine !== null &&
         this.lineText(document, multilineParenthesisVariableLine - 1).includes(
-          "{"
+          '{',
         )
       ) {
         return multilineParenthesisVariableLine;
       } else {
         const lineOfOpenedBrace = this.functionOpenedBraceLine(
           document,
-          selectionLine
+          selectionLine,
         );
         if (lineOfOpenedBrace !== -1) {
           return lineOfOpenedBrace + 1;
@@ -201,20 +211,20 @@ export class CSUnityDebugMessage extends DebugMessage {
     } else if (
       multilineParenthesisVariableLine !== null &&
       this.lineText(document, multilineParenthesisVariableLine - 1).includes(
-        "{"
+        '{',
       )
     ) {
       return multilineParenthesisVariableLine;
     } else if (multilineBracesVariableLine !== null) {
       return multilineBracesVariableLine;
-    } else if (currentLineText.trim().startsWith("return")) {
+    } else if (currentLineText.trim().startsWith('return')) {
       return selectionLine;
     }
     return selectionLine + 1;
   }
   private objectLiteralLine(
     document: TextDocument,
-    selectionLine: number
+    selectionLine: number,
   ): number {
     let currentLineText: string = document.lineAt(selectionLine).text;
     let nbrOfOpenedBrackets: number = (currentLineText.match(/{/g) || [])
@@ -238,12 +248,12 @@ export class CSUnityDebugMessage extends DebugMessage {
   private objectFunctionCallLine(
     document: TextDocument,
     selectionLine: number,
-    selectedVar: string
+    selectedVar: string,
   ): number {
     let currentLineText: string = document.lineAt(selectionLine).text;
     let nextLineText: string = document
       .lineAt(selectionLine + 1)
-      .text.replace(/\s/g, "");
+      .text.replace(/\s/g, '');
     if (
       /\((\s*)$/.test(currentLineText.split(selectedVar)[0]) ||
       /,(\s*)$/.test(currentLineText.split(selectedVar)[0])
@@ -255,22 +265,22 @@ export class CSUnityDebugMessage extends DebugMessage {
     const { openedElementOccurrences, closedElementOccurrences } =
       this.locOpenedClosedElementOccurrences(
         currentLineText,
-        LocElement.Parenthesis
+        LocElement.Parenthesis,
       );
     totalOpenedParenthesis += openedElementOccurrences;
     totalClosedParenthesis += closedElementOccurrences;
     let currentLineNum = selectionLine + 1;
     if (
       totalOpenedParenthesis !== totalClosedParenthesis ||
-      currentLineText.endsWith(".") ||
-      nextLineText.trim().startsWith(".")
+      currentLineText.endsWith('.') ||
+      nextLineText.trim().startsWith('.')
     ) {
       while (currentLineNum < document.lineCount) {
         currentLineText = document.lineAt(currentLineNum).text;
         const { openedElementOccurrences, closedElementOccurrences } =
           this.locOpenedClosedElementOccurrences(
             currentLineText,
-            LocElement.Parenthesis
+            LocElement.Parenthesis,
           );
         totalOpenedParenthesis += openedElementOccurrences;
         totalClosedParenthesis += closedElementOccurrences;
@@ -281,8 +291,8 @@ export class CSUnityDebugMessage extends DebugMessage {
         currentLineNum++;
         if (
           totalOpenedParenthesis === totalClosedParenthesis &&
-          !currentLineText.endsWith(".") &&
-          !nextLineText.trim().startsWith(".")
+          !currentLineText.endsWith('.') &&
+          !nextLineText.trim().startsWith('.')
         ) {
           break;
         }
@@ -294,7 +304,7 @@ export class CSUnityDebugMessage extends DebugMessage {
   }
   private functionAssignmentLine(
     document: TextDocument,
-    selectionLine: number
+    selectionLine: number,
   ): number {
     const currentLineText = document.lineAt(selectionLine).text;
     if (/{/.test(currentLineText)) {
@@ -305,20 +315,20 @@ export class CSUnityDebugMessage extends DebugMessage {
       const closedParenthesisLine = this.closingElementLine(
         document,
         selectionLine,
-        LocElement.Parenthesis
+        LocElement.Parenthesis,
       );
       return (
         this.closingElementLine(
           document,
           closedParenthesisLine,
-          LocElement.Braces
+          LocElement.Braces,
         ) + 1
       );
     }
   }
   private templateStringLine(
     document: TextDocument,
-    selectionLine: number
+    selectionLine: number,
   ): number {
     let currentLineText: string = document.lineAt(selectionLine).text;
     let currentLineNum: number = selectionLine + 1;
@@ -359,7 +369,7 @@ export class CSUnityDebugMessage extends DebugMessage {
   private getMultiLineVariableLine(
     document: TextDocument,
     lineNum: number,
-    blockType: LocElement
+    blockType: LocElement,
   ): number | null {
     let currentLineNum = lineNum - 1;
     let nbrOfOpenedBlockType: number = 0;
@@ -368,7 +378,7 @@ export class CSUnityDebugMessage extends DebugMessage {
       const currentLineText: string = document.lineAt(currentLineNum).text;
       const currentLineParenthesis = this.locOpenedClosedElementOccurrences(
         currentLineText,
-        blockType
+        blockType,
       );
       nbrOfOpenedBlockType += currentLineParenthesis.openedElementOccurrences;
       nbrOfClosedBlockType += currentLineParenthesis.closedElementOccurrences;
@@ -386,7 +396,7 @@ export class CSUnityDebugMessage extends DebugMessage {
       const { openedElementOccurrences, closedElementOccurrences } =
         this.locOpenedClosedElementOccurrences(
           this.lineText(docuemt, line),
-          LocElement.Braces
+          LocElement.Braces,
         );
       nbrOfOpenedBraces += openedElementOccurrences;
       nbrOfClosedBraces += closedElementOccurrences;
@@ -402,84 +412,84 @@ export class CSUnityDebugMessage extends DebugMessage {
   }
   spacesBefore(document: TextDocument, line: number, tabSize: number): string {
     const currentLine: TextLine = document.lineAt(line);
-    const currentLineTextChars: string[] = currentLine.text.split("");
+    const currentLineTextChars: string[] = currentLine.text.split('');
     if (
       (!this.lineCodeProcessing.isFunctionAssignedToVariable(
-        currentLine.text
+        currentLine.text,
       ) &&
         this.lineCodeProcessing.doesContainsNamedFunctionDeclaration(
-          currentLine.text
+          currentLine.text,
         )) ||
       this.lineCodeProcessing.doesContainsBuiltInFunction(currentLine.text) ||
       this.lineCodeProcessing.doesContainClassDeclaration(currentLine.text)
     ) {
       const nextLine: TextLine = document.lineAt(line + 1);
-      const nextLineTextChars: string[] = nextLine.text.split("");
-      if (nextLineTextChars.filter((char) => char !== " ").length !== 0) {
+      const nextLineTextChars: string[] = nextLine.text.split('');
+      if (nextLineTextChars.filter((char) => char !== ' ').length !== 0) {
         if (
           nextLine.firstNonWhitespaceCharacterIndex >
           currentLine.firstNonWhitespaceCharacterIndex
         ) {
           if (
             nextLineTextChars[nextLine.firstNonWhitespaceCharacterIndex - 1] ===
-            "\t"
+            '\t'
           ) {
-            return " ".repeat(
-              nextLine.firstNonWhitespaceCharacterIndex * tabSize
+            return ' '.repeat(
+              nextLine.firstNonWhitespaceCharacterIndex * tabSize,
             );
           } else {
-            return " ".repeat(nextLine.firstNonWhitespaceCharacterIndex);
+            return ' '.repeat(nextLine.firstNonWhitespaceCharacterIndex);
           }
         } else {
           if (
             currentLineTextChars[
               currentLine.firstNonWhitespaceCharacterIndex - 1
-            ] === "\t"
+            ] === '\t'
           ) {
-            return " ".repeat(
-              currentLine.firstNonWhitespaceCharacterIndex * tabSize
+            return ' '.repeat(
+              currentLine.firstNonWhitespaceCharacterIndex * tabSize,
             );
           } else {
-            return " ".repeat(currentLine.firstNonWhitespaceCharacterIndex);
+            return ' '.repeat(currentLine.firstNonWhitespaceCharacterIndex);
           }
         }
       } else {
         if (
           currentLineTextChars[
             currentLine.firstNonWhitespaceCharacterIndex - 1
-          ] === "\t"
+          ] === '\t'
         ) {
-          return " ".repeat(
-            currentLine.firstNonWhitespaceCharacterIndex * tabSize
+          return ' '.repeat(
+            currentLine.firstNonWhitespaceCharacterIndex * tabSize,
           );
         } else {
-          return " ".repeat(currentLine.firstNonWhitespaceCharacterIndex);
+          return ' '.repeat(currentLine.firstNonWhitespaceCharacterIndex);
         }
       }
     } else {
       if (
         currentLineTextChars[
           currentLine.firstNonWhitespaceCharacterIndex - 1
-        ] === "\t"
+        ] === '\t'
       ) {
-        return " ".repeat(
-          currentLine.firstNonWhitespaceCharacterIndex * tabSize
+        return ' '.repeat(
+          currentLine.firstNonWhitespaceCharacterIndex * tabSize,
         );
       } else {
-        return " ".repeat(currentLine.firstNonWhitespaceCharacterIndex);
+        return ' '.repeat(currentLine.firstNonWhitespaceCharacterIndex);
       }
     }
   }
   enclosingBlockName(
     document: TextDocument,
     lineOfSelectedVar: number,
-    blockType: BlockType
+    blockType: BlockType,
   ): string {
     let currentLineNum: number = lineOfSelectedVar;
     while (currentLineNum >= 0) {
       const currentLineText: string = document.lineAt(currentLineNum).text;
       switch (blockType) {
-        case "class":
+        case 'class':
           if (
             this.lineCodeProcessing.doesContainClassDeclaration(currentLineText)
           ) {
@@ -489,20 +499,20 @@ export class CSUnityDebugMessage extends DebugMessage {
                 this.closingElementLine(
                   document,
                   currentLineNum,
-                  LocElement.Braces
+                  LocElement.Braces,
                 )
             ) {
               return `${this.lineCodeProcessing.getClassName(currentLineText)}`;
             }
           }
           break;
-        case "function":
+        case 'function':
           if (
             this.lineCodeProcessing.doesContainsNamedFunctionDeclaration(
-              currentLineText
+              currentLineText,
             ) &&
             !this.lineCodeProcessing.doesContainsBuiltInFunction(
-              currentLineText
+              currentLineText,
             )
           ) {
             if (
@@ -511,7 +521,7 @@ export class CSUnityDebugMessage extends DebugMessage {
                 this.closingElementLine(
                   document,
                   currentLineNum,
-                  LocElement.Braces
+                  LocElement.Braces,
                 )
             ) {
               if (
@@ -519,17 +529,17 @@ export class CSUnityDebugMessage extends DebugMessage {
                   .length !== 0
               ) {
                 return `${this.lineCodeProcessing.getFunctionName(
-                  currentLineText
+                  currentLineText,
                 )}`;
               }
-              return "";
+              return '';
             }
           }
           break;
       }
       currentLineNum--;
     }
-    return "";
+    return '';
   }
   detectAll(
     document: TextDocument,
@@ -543,24 +553,24 @@ export class CSUnityDebugMessage extends DebugMessage {
       const turboConsoleLogMessage: RegExp = /Debug\.Log\(/;
       if (turboConsoleLogMessage.test(document.lineAt(i).text)) {
         const logMessage: Message = {
-          spaces: "",
+          spaces: '',
           lines: [],
         };
         logMessage.spaces = this.spacesBefore(document, i, tabSize);
         const closedParenthesisLine = this.closingElementLine(
           document,
           i,
-          LocElement.Parenthesis
+          LocElement.Parenthesis,
         );
-        let msg = "";
+        let msg = '';
         for (let j = i; j <= closedParenthesisLine; j++) {
           msg += document.lineAt(j).text;
           logMessage.lines.push(document.lineAt(j).rangeIncludingLineBreak);
         }
         if (
-          new RegExp(
-            `${delemiterInsideMessage}{1}"\\+[a-zA-Z0-9_-]\\);`
-          ).test(msg.replace(/\s/g, ""))
+          new RegExp(`${delemiterInsideMessage}{1}"\\+[a-zA-Z0-9_-]\\);`).test(
+            msg.replace(/\s/g, ''),
+          )
         ) {
           logMessages.push(logMessage);
         }
@@ -569,5 +579,3 @@ export class CSUnityDebugMessage extends DebugMessage {
     return logMessages;
   }
 }
-
-
