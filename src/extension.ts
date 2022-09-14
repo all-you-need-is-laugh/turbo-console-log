@@ -103,7 +103,6 @@ export function activate(context: vscode.ExtensionContext) {
       const properties: ExtensionProperties = getExtensionProperties(config);
       const logMessages: Message[] = debugMessage.detectAll(
         document,
-        tabSize,
         properties.delimiterInsideMessage,
         properties.quote
       );
@@ -136,7 +135,6 @@ export function activate(context: vscode.ExtensionContext) {
       const properties: ExtensionProperties = getExtensionProperties(config);
       const logMessages: Message[] = debugMessage.detectAll(
         document,
-        tabSize,
         properties.delimiterInsideMessage,
         properties.quote
       );
@@ -169,7 +167,6 @@ export function activate(context: vscode.ExtensionContext) {
       const properties: ExtensionProperties = getExtensionProperties(config);
       const logMessages: Message[] = debugMessage.detectAll(
         document,
-        tabSize,
         properties.delimiterInsideMessage,
         properties.quote
       );
