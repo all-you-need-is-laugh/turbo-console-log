@@ -21,7 +21,8 @@ export class JSDebugMessage extends DebugMessage {
     insertEnclosingFunction: boolean,
     delemiterInsideMessage: string,
     includeFileNameAndLineNum: boolean,
-    tabSize: number
+    tabSize: number,
+    logType: string
   ): void {
     const classThatEncloseTheVar: string = this.enclosingBlockName(
       document,
@@ -55,8 +56,8 @@ export class JSDebugMessage extends DebugMessage {
     ) {
       logMessagePrefix = `${delemiterInsideMessage} `;
     }
-
-    const debuggingMsg: string = `console.log(${quote}${logMessagePrefix}${logMessagePrefix.length !== 0 &&
+    const debuggingMsg: string = `console.${logType}(${quote}${logMessagePrefix}${
+      logMessagePrefix.length !== 0 &&
       logMessagePrefix !== `${delemiterInsideMessage} `
       ? ` ${delemiterInsideMessage} `
       : ""}${includeFileNameAndLineNum
@@ -70,10 +71,10 @@ export class JSDebugMessage extends DebugMessage {
         ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
         : ""
       : ""}${selectedVar}${quote}, ${selectedVar})${semicolon}`;
-    
+
     if (wrapLogMessage) {
       // 16 represents the length of console.log("");
-      const wrappingMsg: string = `console.log(${quote}${logMessagePrefix} ${"-".repeat(
+      const wrappingMsg: string = `console.${logType}(${quote}${logMessagePrefix} ${"-".repeat(
         debuggingMsg.length - 16
       )}${quote})${semicolon}`;
       textEditor.insert(

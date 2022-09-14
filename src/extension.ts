@@ -8,9 +8,8 @@ import { JSDebugMessage } from "./debug-message/js";
 import { JSLineCodeProcessing } from "./line-code-processing/js";
 
 import { CSDebugMessage } from "./debug-message/cs";
-import { CSLineCodeProcessing } from "./line-code-processing/cs";
 import { CSUnityDebugMessage } from "./debug-message/csunity";
-import { runInThisContext } from "vm";
+import { CSLineCodeProcessing } from "./line-code-processing/cs";
 
 var lineCodeProcessing: LineCodeProcessing;
 var debugMessage: DebugMessage;
@@ -59,7 +58,8 @@ export function activate(context: vscode.ExtensionContext) {
               properties.insertEnclosingFunction,
               properties.delimiterInsideMessage,
               properties.includeFileNameAndLineNum,
-              tabSize
+              tabSize,
+              properties.logType,
             );
           });
         }
@@ -178,7 +178,9 @@ function getExtensionProperties(
   const insertEnclosingFunction = workspaceConfig.insertEnclosingFunction;
   const quote = workspaceConfig.quote || '"';
   const delimiterInsideMessage = workspaceConfig.delimiterInsideMessage || "~";
-  const includeFileNameAndLineNum = workspaceConfig.includeFileNameAndLineNum || false;
+  const includeFileNameAndLineNum =
+    workspaceConfig.includeFileNameAndLineNum || false;
+  const logType = workspaceConfig.logType || "log";
   const extensionProperties: ExtensionProperties = {
     unity3d,
     wrapLogMessage,
@@ -189,6 +191,7 @@ function getExtensionProperties(
     quote,
     delimiterInsideMessage,
     includeFileNameAndLineNum,
+    logType
   };
   return extensionProperties;
 }
@@ -209,7 +212,7 @@ function updateLanguage() {
   debugMessage = getDebugMessage(lineCodeProcessing);
 }
 
-function getLineCodeProcessing(){  
+function getLineCodeProcessing(){
   if(vscode.window.activeTextEditor?.document.languageId == "csharp")
   {
     return new CSLineCodeProcessing();
