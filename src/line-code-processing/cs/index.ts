@@ -1,6 +1,15 @@
 import { LineCodeProcessing } from "..";
 
 export class CSLineCodeProcessing implements LineCodeProcessing {
+  isArgumentOfAnonymousFunction(_loc: string, _argument: string): boolean {
+    throw new Error("Method not implemented.");
+  }
+  shouldTransformAnonymousFunction(_loc: string): boolean {
+    throw new Error("Method not implemented.");
+  }
+  isAnonymousFunction(_loc: string): boolean {
+    throw new Error("Method not implemented.");
+  }
   isValueAssignedToVariable(loc: string): boolean {
     return /.*=.*/.test(loc) && !/=>/.test(loc);
   }

@@ -35,6 +35,7 @@ export abstract class DebugMessage {
     document: TextDocument,
     delemiterInsideMessage: string,
     quote: string,
+    tabSize: number,
   ): Message[];
   abstract enclosingBlockName(
     document: TextDocument,

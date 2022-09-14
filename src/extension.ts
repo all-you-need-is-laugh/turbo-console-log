@@ -11,8 +11,8 @@ import { CSDebugMessage } from "./debug-message/cs";
 import { CSUnityDebugMessage } from "./debug-message/csunity";
 import { CSLineCodeProcessing } from "./line-code-processing/cs";
 
-var lineCodeProcessing: LineCodeProcessing;
-var debugMessage: DebugMessage;
+let lineCodeProcessing: LineCodeProcessing;
+let debugMessage: DebugMessage;
 
 export function activate(context: vscode.ExtensionContext) {
   lineCodeProcessing = getLineCodeProcessing()
@@ -104,7 +104,8 @@ export function activate(context: vscode.ExtensionContext) {
       const logMessages: Message[] = debugMessage.detectAll(
         document,
         properties.delimiterInsideMessage,
-        properties.quote
+        properties.quote,
+        tabSize
       );
       editor.edit((editBuilder) => {
         logMessages.forEach(({ spaces, lines }) => {
@@ -136,7 +137,8 @@ export function activate(context: vscode.ExtensionContext) {
       const logMessages: Message[] = debugMessage.detectAll(
         document,
         properties.delimiterInsideMessage,
-        properties.quote
+        properties.quote,
+        tabSize
       );
       editor.edit((editBuilder) => {
         logMessages.forEach(({ spaces, lines }) => {
@@ -168,7 +170,8 @@ export function activate(context: vscode.ExtensionContext) {
       const logMessages: Message[] = debugMessage.detectAll(
         document,
         properties.delimiterInsideMessage,
-        properties.quote
+        properties.quote,
+        tabSize
       );
       editor.edit((editBuilder) => {
         logMessages.forEach(({ lines }) => {

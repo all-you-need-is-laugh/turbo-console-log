@@ -2,11 +2,20 @@ import * as vscode from 'vscode';
 import { TextDocument, TextEditorEdit, TextLine } from 'vscode';
 import { DebugMessage } from '..';
 import { BlockType, LocElement, Message } from '../../entities';
-import { LineCodeProcessing } from '../../line-code-processing';
 
 export class CSDebugMessage extends DebugMessage {
-  constructor(lineCodeProcessing: LineCodeProcessing) {
-    super(lineCodeProcessing);
+  protected getLogMessage (message: string, selected: string, quote: string, prefix: string, semicolon: string): string {
+    // ignore other variants for now
+    quote = `"`;
+    const postfix = selected ? `${selected} {0}` : '';
+    const args = selected ? `, ${selected}` : '';
+    return `Console.WriteLine(${quote}${prefix}${message}${postfix}${quote}${args})${semicolon}`;
+  }
+  protected getDebugLogMessageRegExp (): RegExp {
+    return /Console\.WriteLine\(/;
+  }
+  protected getDebugLogMessageArgsRegExp (delemiterInsideMessage: string): RegExp {
+    return new RegExp(`${delemiterInsideMessage}{1}{[0-9]{1}}",[a-zA-Z0-9_-]\\);`);
   }
   msg(
     textEditor: TextEditorEdit,
@@ -24,6 +33,8 @@ export class CSDebugMessage extends DebugMessage {
     delemiterInsideMessage: string,
     includeFileNameAndLineNum: boolean,
     tabSize: number,
+    _logType: string,
+    _logFunction: string,
   ): void {
     const classThatEncloseTheVar: string = this.enclosingBlockName(
       document,
@@ -58,36 +69,46 @@ export class CSDebugMessage extends DebugMessage {
       logMessagePrefix = `${delemiterInsideMessage} `;
     }
 
-    const debuggingMsg: string = `Console.WriteLine(${quote}${logMessagePrefix}${
-      logMessagePrefix.length !== 0 &&
-      logMessagePrefix !== `${delemiterInsideMessage} `
-        ? ` ${delemiterInsideMessage} `
-        : ''
-    }${
-      includeFileNameAndLineNum
-        ? `file: ${fileName} ${delemiterInsideMessage} line ${
-            lineOfLogMsg + 1
-          } ${delemiterInsideMessage} `
-        : ''
-    }${
-      insertEnclosingClass
-        ? classThatEncloseTheVar.length > 0
-          ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
-          : ``
-        : ''
-    }${
-      insertEnclosingFunction
-        ? funcThatEncloseTheVar.length > 0
-          ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+    const debuggingMsg = this.getLogMessage(
+      `${
+        logMessagePrefix.length !== 0 &&
+        logMessagePrefix !== `${delemiterInsideMessage} `
+          ? ` ${delemiterInsideMessage} `
           : ''
-        : ''
-    }{0}${quote}, ${selectedVar});`;
+      }${
+        includeFileNameAndLineNum
+          ? `file: ${fileName} ${delemiterInsideMessage} line ${
+              lineOfLogMsg + 1
+            } ${delemiterInsideMessage} `
+          : ''
+      }${
+        insertEnclosingClass
+          ? classThatEncloseTheVar.length > 0
+            ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
+            : ``
+          : ''
+      }${
+        insertEnclosingFunction
+          ? funcThatEncloseTheVar.length > 0
+            ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+            : ''
+          : ''
+      }`,
+      selectedVar,
+      quote,
+      logMessagePrefix,
+      semicolon
+    );
 
     if (wrapLogMessage) {
-      // 21 represents the length of console.log("");
-      const wrappingMsg: string = `Console.WriteLine(${quote}${logMessagePrefix} ${'-'.repeat(
-        debuggingMsg.length - 21,
-      )}${quote})${semicolon}`;
+      const emptyLogMessage = this.getLogMessage(' ', '', quote, logMessagePrefix, semicolon);
+      const wrappingMsg = this.getLogMessage(
+        ' ' + '-'.repeat(debuggingMsg.length - emptyLogMessage.length),
+        "",
+        quote,
+        logMessagePrefix,
+        semicolon
+      );
       textEditor.insert(
         new vscode.Position(
           lineOfLogMsg >= document.lineCount
@@ -99,6 +120,7 @@ export class CSDebugMessage extends DebugMessage {
           lineOfLogMsg === document.lineCount ? '\n' : ''
         }${spacesBeforeMsg}${wrappingMsg}\n${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}${wrappingMsg}\n`,
       );
+      return;
     }
     const previousMsgLogLine = document.lineAt(lineOfLogMsg - 1);
     if (/\){.*}/.test(previousMsgLogLine.text.replace(/\s/g, ''))) {
@@ -148,8 +170,8 @@ export class CSDebugMessage extends DebugMessage {
       selectionLine,
       LocElement.Braces,
     );
-    let currentLineText: string = document.lineAt(selectionLine).text;
-    let nextLineText: string = document
+    const currentLineText: string = document.lineAt(selectionLine).text;
+    const nextLineText: string = document
       .lineAt(selectionLine + 1)
       .text.replace(/\s/g, '');
     if (
@@ -226,7 +248,7 @@ export class CSDebugMessage extends DebugMessage {
     document: TextDocument,
     selectionLine: number,
   ): number {
-    let currentLineText: string = document.lineAt(selectionLine).text;
+    const currentLineText: string = document.lineAt(selectionLine).text;
     let nbrOfOpenedBrackets: number = (currentLineText.match(/{/g) || [])
       .length;
     let nbrOfClosedBrackets: number = (currentLineText.match(/}/g) || [])
@@ -330,7 +352,7 @@ export class CSDebugMessage extends DebugMessage {
     document: TextDocument,
     selectionLine: number,
   ): number {
-    let currentLineText: string = document.lineAt(selectionLine).text;
+    const currentLineText: string = document.lineAt(selectionLine).text;
     let currentLineNum: number = selectionLine + 1;
     let nbrOfBackticks: number = (currentLineText.match(/`/g) || []).length;
     while (currentLineNum < document.lineCount) {
@@ -344,7 +366,7 @@ export class CSDebugMessage extends DebugMessage {
     return nbrOfBackticks % 2 === 0 ? currentLineNum + 1 : selectionLine + 1;
   }
   private arrayLine(document: TextDocument, selectionLine: number): number {
-    let currentLineText: string = document.lineAt(selectionLine).text;
+    const currentLineText: string = document.lineAt(selectionLine).text;
     let nbrOfOpenedBrackets: number = (currentLineText.match(/\[/g) || [])
       .length;
     let nbrOfClosedBrackets: number = (currentLineText.match(/\]/g) || [])
@@ -372,8 +394,8 @@ export class CSDebugMessage extends DebugMessage {
     blockType: LocElement,
   ): number | null {
     let currentLineNum = lineNum - 1;
-    let nbrOfOpenedBlockType: number = 0;
-    let nbrOfClosedBlockType: number = 1; // Closing parenthesis
+    let nbrOfOpenedBlockType = 0;
+    let nbrOfClosedBlockType = 1; // Closing parenthesis
     while (currentLineNum >= 0) {
       const currentLineText: string = document.lineAt(currentLineNum).text;
       const currentLineParenthesis = this.locOpenedClosedElementOccurrences(
@@ -543,15 +565,14 @@ export class CSDebugMessage extends DebugMessage {
   }
   detectAll(
     document: TextDocument,
-    tabSize: number,
     delemiterInsideMessage: string,
     quote: string,
+    tabSize: number,
   ): Message[] {
     const documentNbrOfLines: number = document.lineCount;
     const logMessages: Message[] = [];
     for (let i = 0; i < documentNbrOfLines; i++) {
-      const turboConsoleLogMessage: RegExp = /Console\.WriteLine\(/;
-      if (turboConsoleLogMessage.test(document.lineAt(i).text)) {
+      if (this.getDebugLogMessageRegExp().test(document.lineAt(i).text)) {
         const logMessage: Message = {
           spaces: '',
           lines: [],
@@ -568,9 +589,7 @@ export class CSDebugMessage extends DebugMessage {
           logMessage.lines.push(document.lineAt(j).rangeIncludingLineBreak);
         }
         if (
-          new RegExp(
-            `${delemiterInsideMessage}{1}{[0-9]{1}}",[a-zA-Z0-9_-]\\);`,
-          ).test(msg.replace(/\s/g, ''))
+          this.getDebugLogMessageArgsRegExp(delemiterInsideMessage).test(msg.replace(/\s/g, ''))
         ) {
           logMessages.push(logMessage);
         }

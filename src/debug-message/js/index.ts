@@ -87,10 +87,10 @@ export class JSDebugMessage extends DebugMessage {
         : ''
     }${selectedVar}${quote}, ${selectedVar})${semicolon}`;
     if (wrapLogMessage) {
-      // 16 represents the length of console.log("");
+      // 17 represents the length of console.log(" ");
       const wrappingMsg = `console.${logType}(${quote}${logMessagePrefix} ${'-'.repeat(
-        debuggingMsg.length - 16,
-      )}${logMessagePrefix}${quote})${semicolon}`;
+        debuggingMsg.length - 17 - logMessagePrefix.length,
+      )}${quote})${semicolon}`;
       textEditor.insert(
         new vscode.Position(
           lineOfLogMsg >= document.lineCount
@@ -636,6 +636,7 @@ export class JSDebugMessage extends DebugMessage {
     document: TextDocument,
     delemiterInsideMessage: string,
     quote: string,
+    _tabSize: number,
   ): Message[] {
     const documentNbrOfLines: number = document.lineCount;
     const logMessages: Message[] = [];
