@@ -2,11 +2,20 @@ import * as vscode from 'vscode';
 import { TextDocument, TextEditorEdit, TextLine } from 'vscode';
 import { DebugMessage } from '..';
 import { BlockType, LocElement, Message } from '../../entities';
-import { LineCodeProcessing } from '../../line-code-processing';
 
-export class JSDebugMessage extends DebugMessage {
-  constructor(lineCodeProcessing: LineCodeProcessing) {
-    super(lineCodeProcessing);
+export class CSDebugMessage extends DebugMessage {
+  protected getLogMessage (message: string, selected: string, quote: string, prefix: string, semicolon: string): string {
+    // ignore other variants for now
+    quote = `"`;
+    const postfix = selected ? `${selected} {0}` : '';
+    const args = selected ? `, ${selected}` : '';
+    return `Console.WriteLine(${quote}${prefix}${message}${postfix}${quote}${args})${semicolon}`;
+  }
+  protected getDebugLogMessageRegExp (): RegExp {
+    return /Console\.WriteLine\(/;
+  }
+  protected getDebugLogMessageArgsRegExp (delemiterInsideMessage: string): RegExp {
+    return new RegExp(`${delemiterInsideMessage}{1}{[0-9]{1}}",[a-zA-Z0-9_-]\\);`);
   }
   msg(
     textEditor: TextEditorEdit,
@@ -24,8 +33,8 @@ export class JSDebugMessage extends DebugMessage {
     delemiterInsideMessage: string,
     includeFileNameAndLineNum: boolean,
     tabSize: number,
-    logType: string,
-    logFunction: string,
+    _logType: string,
+    _logFunction: string,
   ): void {
     const classThatEncloseTheVar: string = this.enclosingBlockName(
       document,
@@ -42,11 +51,10 @@ export class JSDebugMessage extends DebugMessage {
       lineOfSelectedVar,
       selectedVar,
     );
-    const linesToAdd: number = insertEmptyLineBeforeLogMessage ? 2 : 1;
-    const spacesBeforeMsg: string = this.spacesBeforeLogMsg(
+    const spacesBeforeMsg: string = this.spacesBefore(
       document,
       lineOfSelectedVar,
-      lineOfLogMsg,
+      tabSize,
     );
     const semicolon: string = addSemicolonInTheEnd ? ';' : '';
     const fileName = document.fileName.includes('/')
@@ -60,37 +68,47 @@ export class JSDebugMessage extends DebugMessage {
     ) {
       logMessagePrefix = `${delemiterInsideMessage} `;
     }
-    const debuggingMsg = `${
-      logFunction !== 'log' ? logFunction : `console.${logType}`
-    }(${quote}${logMessagePrefix}${
-      logMessagePrefix.length !== 0 &&
-      logMessagePrefix !== `${delemiterInsideMessage} `
-        ? ` ${delemiterInsideMessage} `
-        : ''
-    }${
-      includeFileNameAndLineNum
-        ? `file: ${fileName} ${delemiterInsideMessage} line ${
-            lineOfLogMsg + linesToAdd
-          } ${delemiterInsideMessage} `
-        : ''
-    }${
-      insertEnclosingClass
-        ? classThatEncloseTheVar.length > 0
-          ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
-          : ``
-        : ''
-    }${
-      insertEnclosingFunction
-        ? funcThatEncloseTheVar.length > 0
-          ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+
+    const debuggingMsg = this.getLogMessage(
+      `${
+        logMessagePrefix.length !== 0 &&
+        logMessagePrefix !== `${delemiterInsideMessage} `
+          ? ` ${delemiterInsideMessage} `
           : ''
-        : ''
-    }${selectedVar}${quote}, ${selectedVar})${semicolon}`;
+      }${
+        includeFileNameAndLineNum
+          ? `file: ${fileName} ${delemiterInsideMessage} line ${
+              lineOfLogMsg + 1
+            } ${delemiterInsideMessage} `
+          : ''
+      }${
+        insertEnclosingClass
+          ? classThatEncloseTheVar.length > 0
+            ? `${classThatEncloseTheVar} ${delemiterInsideMessage} `
+            : ``
+          : ''
+      }${
+        insertEnclosingFunction
+          ? funcThatEncloseTheVar.length > 0
+            ? `${funcThatEncloseTheVar} ${delemiterInsideMessage} `
+            : ''
+          : ''
+      }`,
+      selectedVar,
+      quote,
+      logMessagePrefix,
+      semicolon
+    );
+
     if (wrapLogMessage) {
-      // 17 represents the length of console.log(" ");
-      const wrappingMsg = `console.${logType}(${quote}${logMessagePrefix} ${'-'.repeat(
-        debuggingMsg.length - 17 - logMessagePrefix.length,
-      )}${quote})${semicolon}`;
+      const emptyLogMessage = this.getLogMessage(' ', '', quote, logMessagePrefix, semicolon);
+      const wrappingMsg = this.getLogMessage(
+        ' ' + '-'.repeat(debuggingMsg.length - emptyLogMessage.length),
+        "",
+        quote,
+        logMessagePrefix,
+        semicolon
+      );
       textEditor.insert(
         new vscode.Position(
           lineOfLogMsg >= document.lineCount
@@ -106,185 +124,32 @@ export class JSDebugMessage extends DebugMessage {
     }
     const previousMsgLogLine = document.lineAt(lineOfLogMsg - 1);
     if (/\){.*}/.test(previousMsgLogLine.text.replace(/\s/g, ''))) {
-      this.emptyBlockMsg(
-        document,
-        textEditor,
-        previousMsgLogLine,
-        lineOfLogMsg,
-        debuggingMsg,
-        spacesBeforeMsg,
-      );
-      return;
-    }
-    const selectedVarLine = document.lineAt(lineOfSelectedVar);
-    const selectedVarLineLoc = selectedVarLine.text;
-    if (
-      this.lineCodeProcessing.isAnonymousFunction(selectedVarLineLoc) &&
-      this.lineCodeProcessing.isArgumentOfAnonymousFunction(
-        selectedVarLineLoc,
-        selectedVar,
-      ) &&
-      this.lineCodeProcessing.shouldTransformAnonymousFunction(
-        selectedVarLineLoc,
-      )
-    ) {
-      this.anonymousPropMsg(
-        document,
-        textEditor,
-        tabSize,
-        addSemicolonInTheEnd,
-        selectedVarLine,
-        debuggingMsg,
-      );
-      return;
-    }
-    textEditor.insert(
-      new vscode.Position(
-        lineOfLogMsg >= document.lineCount ? document.lineCount : lineOfLogMsg,
-        0,
-      ),
-      `${insertEmptyLineBeforeLogMessage ? '\n' : ''}${
-        lineOfLogMsg === document.lineCount ? '\n' : ''
-      }${spacesBeforeMsg}${debuggingMsg}\n${
-        insertEmptyLineAfterLogMessage ? '\n' : ''
-      }`,
-    );
-  }
-  private anonymousPropMsg(
-    document: TextDocument,
-    textEditor: TextEditorEdit,
-    tabSize: number,
-    addSemicolonInTheEnd: boolean,
-    selectedPropLine: TextLine,
-    debuggingMsg: string,
-  ) {
-    const selectedVarPropLoc = selectedPropLine.text;
-    const anonymousFunctionLeftPart = selectedVarPropLoc.split('=>')[0].trim();
-    const anonymousFunctionRightPart = selectedVarPropLoc
-      .split('=>')[1]
-      .replace(';', '')
-      .trim()
-      .replace(/\)\s*;?$/, '');
-    const spacesBeforeSelectedVarLine = this.spacesBeforeLine(
-      document,
-      selectedPropLine.lineNumber,
-    );
-    const spacesBeforeLinesToInsert = `${spacesBeforeSelectedVarLine}${' '.repeat(
-      tabSize,
-    )}`;
-    const isCalledInsideFunction = /\)\s*;?$/.test(selectedVarPropLoc);
-    const isNextLineCallToOtherFunction = document
-      .lineAt(selectedPropLine.lineNumber + 1)
-      .text.trim()
-      .startsWith('.');
-    const anonymousFunctionClosedParenthesisLine = this.functionClosedLine(
-      document,
-      selectedPropLine.lineNumber,
-      LocElement.Parenthesis,
-    );
-    const isReturnBlockMultiLine =
-      anonymousFunctionClosedParenthesisLine - selectedPropLine.lineNumber !==
-      0;
-    textEditor.delete(selectedPropLine.rangeIncludingLineBreak);
-    textEditor.insert(
-      new vscode.Position(selectedPropLine.lineNumber, 0),
-      `${spacesBeforeSelectedVarLine}${anonymousFunctionLeftPart} => {\n`,
-    );
-    if (isReturnBlockMultiLine) {
-      textEditor.insert(
-        new vscode.Position(selectedPropLine.lineNumber, 0),
-        `${spacesBeforeLinesToInsert}${debuggingMsg}\n`,
-      );
-      let currentLine = document.lineAt(selectedPropLine.lineNumber + 1);
-      do {
-        textEditor.delete(currentLine.rangeIncludingLineBreak);
-        const addReturnKeyword =
-          currentLine.lineNumber === selectedPropLine.lineNumber + 1;
-        const spacesBeforeCurrentLine = this.spacesBeforeLine(
-          document,
-          currentLine.lineNumber,
-        );
-        if (currentLine.text.trim() === ')') {
-          currentLine = document.lineAt(currentLine.lineNumber + 1);
-          continue;
-        }
-        if (currentLine.lineNumber === anonymousFunctionClosedParenthesisLine) {
-          textEditor.insert(
-            new vscode.Position(currentLine.lineNumber, 0),
-            `${spacesBeforeCurrentLine}${
-              addReturnKeyword ? 'return ' : '\t'
-            }${currentLine.text.trim().replace(/\)\s*$/, '')}\n`,
-          );
-        } else {
-          textEditor.insert(
-            new vscode.Position(currentLine.lineNumber, 0),
-            `${spacesBeforeCurrentLine}${
-              addReturnKeyword ? 'return ' : '\t'
-            }${currentLine.text.trim()}\n`,
-          );
-        }
-        currentLine = document.lineAt(currentLine.lineNumber + 1);
-      } while (
-        currentLine.lineNumber <
-        anonymousFunctionClosedParenthesisLine + 1
-      );
-      textEditor.insert(
-        new vscode.Position(anonymousFunctionClosedParenthesisLine + 1, 0),
-        `${spacesBeforeSelectedVarLine}}${
-          addSemicolonInTheEnd && !isReturnBlockMultiLine ? ';' : ''
-        })\n`,
-      );
-    } else {
-      const nextLineText = document.lineAt(
-        selectedPropLine.lineNumber + 1,
-      ).text;
-      const nextLineIsEndWithinTheMainFunction = /^\)/.test(
-        nextLineText.trim(),
-      );
-      textEditor.insert(
-        new vscode.Position(selectedPropLine.lineNumber, 0),
-        `${spacesBeforeLinesToInsert}${debuggingMsg}\n`,
-      );
-      textEditor.insert(
-        new vscode.Position(selectedPropLine.lineNumber, 0),
-        `${spacesBeforeLinesToInsert}return ${anonymousFunctionRightPart}${
-          addSemicolonInTheEnd ? ';' : ''
-        }\n`,
-      );
-      textEditor.insert(
-        new vscode.Position(selectedPropLine.lineNumber, 0),
-        `${spacesBeforeSelectedVarLine}}${isCalledInsideFunction ? ')' : ''}${
-          addSemicolonInTheEnd &&
-          !isNextLineCallToOtherFunction &&
-          !nextLineIsEndWithinTheMainFunction
-            ? ';'
-            : ''
-        }${nextLineText === '' ? '' : '\n'}`,
-      );
-    }
-  }
-  private emptyBlockMsg(
-    document: TextDocument,
-    textEditor: TextEditorEdit,
-    emptyBlockLine: TextLine,
-    logMsgLine: number,
-    debuggingMsg: string,
-    spacesBeforeMsg: string,
-  ) {
-    if (/\){.*}/.test(emptyBlockLine.text.replace(/\s/g, ''))) {
       const textBeforeClosedFunctionParenthesis =
-        emptyBlockLine.text.split(')')[0];
-      textEditor.delete(emptyBlockLine.rangeIncludingLineBreak);
+        previousMsgLogLine.text.split(')')[0];
+      textEditor.delete(previousMsgLogLine.rangeIncludingLineBreak);
       textEditor.insert(
         new vscode.Position(
-          logMsgLine >= document.lineCount ? document.lineCount : logMsgLine,
+          lineOfLogMsg >= document.lineCount
+            ? document.lineCount
+            : lineOfLogMsg,
           0,
         ),
-        `${textBeforeClosedFunctionParenthesis}) {\n${
-          logMsgLine === document.lineCount ? '\n' : ''
+        `${textBeforeClosedFunctionParenthesis}){\n${
+          lineOfLogMsg === document.lineCount ? '\n' : ''
         }${spacesBeforeMsg}${debuggingMsg}\n${spacesBeforeMsg}}\n`,
       );
-      return;
+    } else {
+      textEditor.insert(
+        new vscode.Position(
+          lineOfLogMsg >= document.lineCount
+            ? document.lineCount
+            : lineOfLogMsg,
+          0,
+        ),
+        `${
+          lineOfLogMsg === document.lineCount ? '\n' : ''
+        }${spacesBeforeMsg}${debuggingMsg}\n`,
+      );
     }
   }
   line(
@@ -320,18 +185,8 @@ export class JSDebugMessage extends DebugMessage {
     ) {
       if (currentLineText.split('=')[0].includes(selectedVar)) {
         return this.functionAssignmentLine(document, selectionLine);
-      } else if (
-        this.lineCodeProcessing.isAnonymousFunction(currentLineText) &&
-        !this.lineCodeProcessing.shouldTransformAnonymousFunction(
-          currentLineText,
-        )
-      ) {
-        selectionLine + 1;
       } else {
-        return (
-          this.functionClosedLine(document, selectionLine, LocElement.Braces) +
-          1
-        );
+        return this.functionOpenedBraceLine(document, selectionLine) + 1;
       }
     } else if (
       this.lineCodeProcessing.isObjectFunctionCall(
@@ -357,15 +212,22 @@ export class JSDebugMessage extends DebugMessage {
         ? multilineParenthesisVariableLine
         : selectionLine + 1;
     } else if (this.lineCodeProcessing.isFunctionDeclaration(currentLineText)) {
-      const { openedElementOccurrences, closedElementOccurrences } =
-        this.locOpenedClosedElementOccurrences(
-          document.lineAt(selectionLine).text,
-          LocElement.Parenthesis,
+      if (
+        multilineParenthesisVariableLine !== null &&
+        this.lineText(document, multilineParenthesisVariableLine - 1).includes(
+          '{',
+        )
+      ) {
+        return multilineParenthesisVariableLine;
+      } else {
+        const lineOfOpenedBrace = this.functionOpenedBraceLine(
+          document,
+          selectionLine,
         );
-      if (openedElementOccurrences === closedElementOccurrences) {
-        return selectionLine + 1;
+        if (lineOfOpenedBrace !== -1) {
+          return lineOfOpenedBrace + 1;
+        }
       }
-      return multilineParenthesisVariableLine || selectionLine + 1;
     } else if (/`/.test(currentLineText)) {
       return this.templateStringLine(document, selectionLine);
     } else if (
@@ -549,27 +411,96 @@ export class JSDebugMessage extends DebugMessage {
     }
     return null;
   }
-  private functionClosedLine(
-    docuemt: TextDocument,
-    declarationLine: number,
-    locElementType: LocElement,
-  ): number {
+  private functionOpenedBraceLine(docuemt: TextDocument, line: number) {
     let nbrOfOpenedBraces = 0;
     let nbrOfClosedBraces = 0;
-    while (declarationLine < docuemt.lineCount) {
+    while (line < docuemt.lineCount) {
       const { openedElementOccurrences, closedElementOccurrences } =
         this.locOpenedClosedElementOccurrences(
-          this.lineText(docuemt, declarationLine),
-          locElementType,
+          this.lineText(docuemt, line),
+          LocElement.Braces,
         );
       nbrOfOpenedBraces += openedElementOccurrences;
       nbrOfClosedBraces += closedElementOccurrences;
-      if (nbrOfOpenedBraces - nbrOfClosedBraces === 0) {
-        return declarationLine;
+      if (
+        nbrOfOpenedBraces - nbrOfClosedBraces === 1 ||
+        nbrOfOpenedBraces - nbrOfClosedBraces === 0
+      ) {
+        return line;
       }
-      declarationLine++;
+      line++;
     }
     return -1;
+  }
+  spacesBefore(document: TextDocument, line: number, tabSize: number): string {
+    const currentLine: TextLine = document.lineAt(line);
+    const currentLineTextChars: string[] = currentLine.text.split('');
+    if (
+      (!this.lineCodeProcessing.isFunctionAssignedToVariable(
+        currentLine.text,
+      ) &&
+        this.lineCodeProcessing.doesContainsNamedFunctionDeclaration(
+          currentLine.text,
+        )) ||
+      this.lineCodeProcessing.doesContainsBuiltInFunction(currentLine.text) ||
+      this.lineCodeProcessing.doesContainClassDeclaration(currentLine.text)
+    ) {
+      const nextLine: TextLine = document.lineAt(line + 1);
+      const nextLineTextChars: string[] = nextLine.text.split('');
+      if (nextLineTextChars.filter((char) => char !== ' ').length !== 0) {
+        if (
+          nextLine.firstNonWhitespaceCharacterIndex >
+          currentLine.firstNonWhitespaceCharacterIndex
+        ) {
+          if (
+            nextLineTextChars[nextLine.firstNonWhitespaceCharacterIndex - 1] ===
+            '\t'
+          ) {
+            return ' '.repeat(
+              nextLine.firstNonWhitespaceCharacterIndex * tabSize,
+            );
+          } else {
+            return ' '.repeat(nextLine.firstNonWhitespaceCharacterIndex);
+          }
+        } else {
+          if (
+            currentLineTextChars[
+              currentLine.firstNonWhitespaceCharacterIndex - 1
+            ] === '\t'
+          ) {
+            return ' '.repeat(
+              currentLine.firstNonWhitespaceCharacterIndex * tabSize,
+            );
+          } else {
+            return ' '.repeat(currentLine.firstNonWhitespaceCharacterIndex);
+          }
+        }
+      } else {
+        if (
+          currentLineTextChars[
+            currentLine.firstNonWhitespaceCharacterIndex - 1
+          ] === '\t'
+        ) {
+          return ' '.repeat(
+            currentLine.firstNonWhitespaceCharacterIndex * tabSize,
+          );
+        } else {
+          return ' '.repeat(currentLine.firstNonWhitespaceCharacterIndex);
+        }
+      }
+    } else {
+      if (
+        currentLineTextChars[
+          currentLine.firstNonWhitespaceCharacterIndex - 1
+        ] === '\t'
+      ) {
+        return ' '.repeat(
+          currentLine.firstNonWhitespaceCharacterIndex * tabSize,
+        );
+      } else {
+        return ' '.repeat(currentLine.firstNonWhitespaceCharacterIndex);
+      }
+    }
   }
   enclosingBlockName(
     document: TextDocument,
@@ -584,6 +515,7 @@ export class JSDebugMessage extends DebugMessage {
           if (
             this.lineCodeProcessing.doesContainClassDeclaration(currentLineText)
           ) {
+            // TODO: fix this method for case when "{" is on the next line
             if (
               lineOfSelectedVar > currentLineNum &&
               lineOfSelectedVar <
@@ -636,18 +568,17 @@ export class JSDebugMessage extends DebugMessage {
     document: TextDocument,
     delemiterInsideMessage: string,
     quote: string,
-    _tabSize: number,
+    tabSize: number,
   ): Message[] {
     const documentNbrOfLines: number = document.lineCount;
     const logMessages: Message[] = [];
     for (let i = 0; i < documentNbrOfLines; i++) {
-      const turboConsoleLogMessage = /console\.log\(/;
-      if (turboConsoleLogMessage.test(document.lineAt(i).text)) {
+      if (this.getDebugLogMessageRegExp().test(document.lineAt(i).text)) {
         const logMessage: Message = {
           spaces: '',
           lines: [],
         };
-        logMessage.spaces = this.spacesBeforeLogMsg(document, i, i);
+        logMessage.spaces = this.spacesBefore(document, i, tabSize);
         const closedParenthesisLine = this.closingElementLine(
           document,
           i,
@@ -659,9 +590,7 @@ export class JSDebugMessage extends DebugMessage {
           logMessage.lines.push(document.lineAt(j).rangeIncludingLineBreak);
         }
         if (
-          new RegExp(
-            `${delemiterInsideMessage}[a-zA-Z0-9]+${quote},(//)?[a-zA-Z0-9]+`,
-          ).test(msg.replace(/\s/g, ''))
+          this.getDebugLogMessageArgsRegExp(delemiterInsideMessage).test(msg.replace(/\s/g, ''))
         ) {
           logMessages.push(logMessage);
         }
