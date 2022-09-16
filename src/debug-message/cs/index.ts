@@ -515,6 +515,7 @@ export class CSDebugMessage extends DebugMessage {
           if (
             this.lineCodeProcessing.doesContainClassDeclaration(currentLineText)
           ) {
+            // TODO: fix this method for case when "{" is on the next line
             if (
               lineOfSelectedVar > currentLineNum &&
               lineOfSelectedVar <
